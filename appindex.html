@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusCheck アプリ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel CDN for JSX transformation in browser (開発用、本番環境ではビルド推奨) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* 横スクロール防止 */
+        }
+        .text-xxs {
+            font-size: 0.65rem; /* 非常に小さいフォントサイズ */
+        }
+        /* カスタムレンジ入力のスライダーサムのスタイル */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #2563eb; /* blue-600 */
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #2563eb; /* blue-600 */
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // アプリケーション全体のコンテキストを作成
+        const AppContext = React.createContext();
+
+        // モックデータ：授業情報とレビュー
+        const mockLectures = [
+          {
+            id: 'lec001',
+            name: 'データサイエンス入門',
+            professor: '山田 太郎',
+            time: '月曜 2限',
+            averageRating: 4.2,
+            reviews: [
+              { id: 'rev001', text: 'この授業は全体的に分かりやすかったです。教材もきちんと整理されていて、安心して受講できました。特に統計部分の説明が丁寧で、役に立ちました。', sentiment: 85, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['分かりやすい', '丁寧', '役に立つ'] },
+              { id: 'rev002', text: 'この授業はマジで最高でした！！データサイエンスがこんなに面白いなんて思わなかったし、先生の解説が神レベル。友達にも全力でオススメしてます！もっと早く受けたかった！', sentiment: 98, studentInfo: { grade: '1年', major: '経済学' }, keywords: ['最高', '面白い', '神レベル'] },
+              { id: 'rev003', text: '内容自体は悪くないのですが、進み方が少し早く感じました。もう少し例題を増やしてもらえると助かります。質問時間が短く、少し不安でした。', sentiment: 40, studentInfo: { grade: '3年', major: '工学' }, keywords: ['早い', '例題不足', '不安'] },
+              { id: 'rev004', text: 'この授業は本当にひどかったです。説明が雑でイライラするし、質問しても「自分で考えろ」の一点張り。時間とお金を完全に無駄にしました。受けなければよかった。', sentiment: 10, studentInfo: { grade: '2年', major: '文学' }, keywords: ['ひどい', '雑', 'イライラ'] },
+              { id: 'rev005', text: 'テストが簡単でした。', sentiment: 70, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['テスト簡単'] },
+              { id: 'rev006', text: '出席点が大事です。', sentiment: 60, studentInfo: { grade: '3年', major: '経済学' }, keywords: ['出席点'] },
+              { id: 'rev007', text: '課題が多いですが、学びは深いです。', sentiment: 65, studentInfo: { grade: '1年', major: '工学' }, keywords: ['課題多い', '学び深い'] },
+              { id: 'rev008', text: '先生のユーモアが最高でした。', sentiment: 90, studentInfo: { grade: '4年', major: '文学' }, keywords: ['ユーモア', '最高'] },
+              { id: 'rev009', text: 'グループワークが多めです。', sentiment: 55, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['グループワーク'] },
+              { id: 'rev010', text: '期末レポートで単位が取れます。', sentiment: 75, studentInfo: { grade: '3年', major: '経済学' }, keywords: ['期末レポート', '単位'] },
+              { id: 'rev011', text: 'この授業は全体的に分かりやすかったです。', sentiment: 80, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['分かりやすい'] },
+              { id: 'rev012', text: 'テストが簡単でした。', sentiment: 72, studentInfo: { grade: '3年', major: '経済学' }, keywords: ['テスト簡単'] },
+              { id: 'rev013', text: '出席点が大事です。', sentiment: 62, studentInfo: { grade: '1年', major: '工学' }, keywords: ['出席点'] },
+              { id: 'rev014', text: '課題が多いですが、学びは深いです。', sentiment: 68, studentInfo: { grade: '4年', major: '文学' }, keywords: ['課題多い', '学び深い'] },
+              { id: 'rev015', text: '先生のユーモアが最高でした。', sentiment: 92, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['ユーモア', '最高'] },
+            ],
+          },
+          {
+            id: 'lec002',
+            name: '基礎プログラミング演習',
+            professor: '田中 健太',
+            time: '火曜 3限',
+            averageRating: 3.8,
+            reviews: [
+              { id: 'rev016', text: 'プログラミング初心者には少し難しいかもしれません。', sentiment: 30, studentInfo: { grade: '1年', major: '情報科学' }, keywords: ['難しい', '初心者'] },
+              { id: 'rev017', text: '演習が多くて実践的でした。', sentiment: 75, studentInfo: { grade: '2年', major: '工学' }, keywords: ['演習多い', '実践的'] },
+              { id: 'rev018', text: '課題の量が尋常じゃない。', sentiment: 20, studentInfo: { grade: '1年', major: '情報科学' }, keywords: ['課題多い'] },
+              { id: 'rev019', text: '先生のサポートが手厚く、質問しやすかったです。', sentiment: 88, studentInfo: { grade: '2年', major: '文学' }, keywords: ['サポート手厚い', '質問しやすい'] },
+              { id: 'rev020', text: 'テストが簡単でした。', sentiment: 70, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['テスト簡単'] },
+            ],
+          },
+          {
+            id: 'lec003',
+            name: '日本史概論',
+            professor: '佐藤 雅子',
+            time: '水曜 1限',
+            averageRating: 4.5,
+            reviews: [
+              { id: 'rev021', text: '先生の話が面白くて、毎回授業が楽しみでした。', sentiment: 95, studentInfo: { grade: '1年', major: '文学' }, keywords: ['面白い', '楽しみ'] },
+              { id: 'rev022', text: 'レポートのテーマが自由で書きやすかったです。', sentiment: 80, studentInfo: { grade: '2年', major: '経済学' }, keywords: ['レポート自由', '書きやすい'] },
+            ],
+          },
+          {
+            id: 'lec004',
+            name: '経済学入門',
+            professor: '鈴木 浩',
+            time: '木曜 4限',
+            averageRating: 3.5,
+            reviews: [
+              { id: 'rev023', text: '内容は良いが、先生の声が小さくて聞き取りづらい。', sentiment: 35, studentInfo: { grade: '3年', major: '経済学' }, keywords: ['声小さい', '聞き取りづらい'] },
+              { id: 'rev024', text: 'テストが難しかったです。', sentiment: 25, studentInfo: { grade: '2年', major: '情報科学' }, keywords: ['テスト難しい'] },
+            ],
+          },
+        ];
+
+        // AppProvider：アプリケーションのグローバルステートを管理し、子コンポーネントに提供
+        const AppProvider = ({ children }) => {
+          // 現在表示中のページを管理するステート
+          const [currentPage, setCurrentPage] = React.useState('home'); // 'home', 'lectureList', 'lectureDetail', 'schedule', 'settings'
+          // 選択中の授業情報を管理するステート
+          const [selectedLecture, setSelectedLecture] = React.useState(null);
+          // 検索キーワードを管理するステート
+          const [searchTerm, setSearchTerm] = React.useState('');
+          // 履修スケジュールを管理するステート（授業ID、授業名、時間）
+          const [schedule, setSchedule] = React.useState([]);
+          // アプリケーション全体に表示するメッセージを管理するステート
+          const [appMessage, setAppMessage] = React.useState({ text: '', type: '' }); // type: 'success', 'error', 'info'
+
+          // メッセージを表示する関数
+          const showMessage = (text, type = 'info', duration = 3000) => {
+            setAppMessage({ text, type });
+            setTimeout(() => {
+              setAppMessage({ text: '', type: '' });
+            }, duration);
+          };
+
+          // 授業をスケジュールに追加する関数
+          const addLectureToSchedule = (lecture) => {
+            // 基本的な重複チェック（同じ時間帯に既に授業があるか）
+            const conflict = schedule.some(item => {
+              const existingLecture = mockLectures.find(lec => lec.id === item.lectureId);
+              return existingLecture && existingLecture.time === lecture.time;
+            });
+
+            if (conflict) {
+              // 重複がある場合はメッセージを表示
+              showMessage('この時間帯には既に授業が登録されています。', 'error');
+              return false;
+            }
+            // スケジュールに授業を追加
+            setSchedule(prev => [...prev, { lectureId: lecture.id, name: lecture.name, time: lecture.time }]);
+            showMessage('授業がスケジュールに追加されました！', 'success');
+            return true;
+          };
+
+          // コンテキストに渡す値
+          const contextValue = {
+            currentPage,
+            setCurrentPage,
+            selectedLecture,
+            setSelectedLecture,
+            searchTerm,
+            setSearchTerm,
+            mockLectures, // モックデータをコンテキスト経由で利用可能にする
+            schedule,
+            addLectureToSchedule,
+            appMessage,
+            showMessage,
+          };
+
+          return (
+            <AppContext.Provider value={contextValue}>
+              {children}
+            </AppContext.Provider>
+          );
+        };
+
+        // useAppContext：AppProviderからコンテキスト値を取得するためのカスタムフック
+        const useAppContext = () => {
+          return React.useContext(AppContext);
+        };
+
+        // 感情スコアに基づいて色を返すヘルパー関数
+        const getSentimentColor = (sentiment) => {
+          if (sentiment >= 80) return 'bg-green-200 text-green-800'; // ポジティブ
+          if (sentiment >= 60) return 'bg-blue-200 text-blue-800';  // ややポジティブ
+          if (sentiment >= 40) return 'bg-yellow-200 text-yellow-800'; // 中立〜ややネガティブ
+          return 'bg-red-200 text-red-800'; // ネガティブ
+        };
+
+        // 特定のキーワードを含むレビューの数を数えるヘルパー関数（「同じ意見の件数」用）
+        const getSimilarOpinionsCount = (reviews, targetKeywords) => {
+          if (!targetKeywords || targetKeywords.length === 0) return 0;
+          let count = 0;
+          reviews.forEach(review => {
+            // レビューのキーワードにターゲットキーワードが含まれているかチェック
+            if (targetKeywords.some(keyword => review.keywords.includes(keyword))) {
+              count++;
+            }
+          });
+          return count;
+        };
+
+        // アプリケーションメッセージ表示コンポーネント
+        const MessageDisplay = () => {
+          const { appMessage } = useAppContext();
+
+          if (!appMessage.text) return null;
+
+          let bgColor = 'bg-blue-500'; // info
+          if (appMessage.type === 'success') bgColor = 'bg-green-500';
+          if (appMessage.type === 'error') bgColor = 'bg-red-500';
+
+          return (
+            <div className={`fixed top-4 left-1/2 -translate-x-1/2 p-3 rounded-lg shadow-lg text-white font-bold z-50 transition-opacity duration-300 ${appMessage.text ? 'opacity-100' : 'opacity-0'}`}>
+              {appMessage.text}
+            </div>
+          );
+        };
+
+
+        // --- 各ページのコンポーネント定義 ---
+
+        // ホーム画面コンポーネント
+        const HomePage = () => {
+          const { setCurrentPage, setSearchTerm, mockLectures, setSelectedLecture } = useAppContext();
+
+          // 検索フォームの送信ハンドラ
+          const handleSearch = (e) => {
+            e.preventDefault();
+            const term = e.target.elements.search.value;
+            setSearchTerm(term); // 検索キーワードをステートに保存
+            setCurrentPage('lectureList'); // 授業一覧ページへ遷移
+          };
+
+          // おすすめ授業（モックデータから最初の3件）
+          const recommendedLectures = mockLectures.slice(0, 3);
+          // 人気ランキング（平均評価でソートし上位3件）
+          const popularRankings = mockLectures.sort((a, b) => b.averageRating - a.averageRating).slice(0, 3);
+
+          return (
+            <div className="flex flex-col h-full bg-gray-50 p-4">
+              {/* アプリケーションヘッダー */}
+              <div className="flex items-center justify-center p-4 bg-white rounded-xl shadow-sm mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">CampusCheck</h1>
+              </div>
+
+              {/* 検索バー */}
+              <form onSubmit={handleSearch} className="mb-8">
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="search"
+                    placeholder="授業名・教授名を検索"
+                    className="w-full p-4 pl-12 pr-4 rounded-xl border border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-700 shadow-sm"
+                    aria-label="授業名または教授名を検索"
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    🔍
+                  </span>
+                </div>
+              </form>
+
+              {/* おすすめの授業セクション */}
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">あなたへのおすすめ</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {recommendedLectures.map(lecture => (
+                    <div
+                      key={lecture.id}
+                      className="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => {
+                        setSelectedLecture(lecture); // 選択した授業をステートに保存
+                        setCurrentPage('lectureDetail'); // 授業詳細ページへ遷移
+                      }}
+                      role="button"
+                      tabIndex="0"
+                      aria-label={`${lecture.name} の詳細を見る`}
+                    >
+                      <h3 className="font-bold text-lg text-gray-900 mb-1">{lecture.name}</h3>
+                      <p className="text-gray-600 text-sm mb-2">{lecture.professor}</p>
+                      <div className="flex items-center">
+                        <span className="text-yellow-500 text-xl mr-1">★</span>
+                        <span className="text-gray-800 font-medium">{lecture.averageRating.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 今期人気ランキングセクション */}
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">今期人気ランキング</h2>
+                <div className="bg-white rounded-xl shadow-md p-4">
+                  {popularRankings.map((lecture, index) => (
+                    <div
+                      key={lecture.id}
+                      className="flex items-center py-2 border-b last:border-b-0 border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        setSelectedLecture(lecture); // 選択した授業をステートに保存
+                        setCurrentPage('lectureDetail'); // 授業詳細ページへ遷移
+                      }}
+                      role="button"
+                      tabIndex="0"
+                      aria-label={`${index + 1}位：${lecture.name} の詳細を見る`}
+                    >
+                      <span className="font-bold text-blue-600 text-xl mr-4">{index + 1}.</span>
+                      <div>
+                        <h3 className="font-medium text-gray-900">{lecture.name}</h3>
+                        <p className="text-gray-600 text-sm">{lecture.professor} <span className="text-yellow-500">★</span>{lecture.averageRating.toFixed(1)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        // 授業一覧画面コンポーネント
+        const LectureListPage = () => {
+          const { setCurrentPage, setSelectedLecture, mockLectures, searchTerm } = useAppContext();
+
+          // 検索キーワードに基づいて授業をフィルタリング
+          const filteredLectures = mockLectures.filter(lecture =>
+            lecture.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lecture.professor.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+
+          return (
+            <div className="flex flex-col h-full bg-gray-50 p-4">
+              {/* ヘッダー */}
+              <div className="flex items-center p-4 bg-white rounded-xl shadow-sm mb-6">
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className="mr-4 text-blue-600 font-bold text-xl hover:text-blue-800 transition-colors"
+                  aria-label="ホームに戻る"
+                >
+                  ←
+                </button>
+                <h1 className="text-2xl font-bold text-gray-800">授業一覧</h1>
+              </div>
+
+              {/* 検索結果の表示 */}
+              {filteredLectures.length === 0 ? (
+                <p className="text-center text-gray-600 mt-8">検索結果が見つかりませんでした。</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredLectures.map(lecture => (
+                    <div
+                      key={lecture.id}
+                      className="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => {
+                        setSelectedLecture(lecture); // 選択した授業をステートに保存
+                        setCurrentPage('lectureDetail'); // 授業詳細ページへ遷移
+                      }}
+                      role="button"
+                      tabIndex="0"
+                      aria-label={`${lecture.name} の詳細を見る`}
+                    >
+                      <h3 className="font-bold text-lg text-gray-900 mb-1">{lecture.name}</h3>
+                      <p className="text-gray-600 text-sm mb-2">{lecture.professor}</p>
+                      <div className="flex items-center mb-2">
+                        <span className="text-yellow-500 text-xl mr-1">★</span>
+                        <span className="text-gray-800 font-medium">{lecture.averageRating.toFixed(1)}</span>
+                      </div>
+                      <p className="text-gray-500 text-xs">
+                        「テストが簡単」について同じ意見: {getSimilarOpinionsCount(lecture.reviews, ['テスト簡単'])}件
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        // 授業詳細画面コンポーネント
+        const LectureDetailPage = () => {
+          const { setCurrentPage, selectedLecture, addLectureToSchedule } = useAppContext();
+          // 表示するレビュー数を管理するステート
+          const [displayReviewCount, setDisplayReviewCount] = React.useState(5);
+
+          // 授業が選択されていない場合の表示
+          if (!selectedLecture) {
+            return (
+              <div className="flex flex-col h-full bg-gray-50 p-4">
+                <div className="flex items-center p-4 bg-white rounded-xl shadow-sm mb-6">
+                  <button
+                    onClick={() => setCurrentPage('lectureList')}
+                    className="mr-4 text-blue-600 font-bold text-xl hover:text-blue-800 transition-colors"
+                    aria-label="授業一覧に戻る"
+                  >
+                    ←
+                  </button>
+                  <h1 className="text-2xl font-bold text-gray-800">授業詳細</h1>
+                </div>
+                <p className="text-center text-gray-600 mt-8">授業が選択されていません。</p>
+              </div>
+            );
+          }
+
+          // 履修に追加ボタンのハンドラ
+          const handleAddToSchedule = () => {
+            const added = addLectureToSchedule(selectedLecture); // スケジュールに追加を試みる
+            if (added) {
+              setCurrentPage('schedule'); // 成功したらスケジュールページへ遷移
+            }
+          };
+
+          return (
+            <div className="flex flex-col h-full bg-gray-50 p-4">
+              {/* ヘッダー */}
+              <div className="flex items-center p-4 bg-white rounded-xl shadow-sm mb-6">
+                <button
+                  onClick={() => setCurrentPage('lectureList')}
+                  className="mr-4 text-blue-600 font-bold text-xl hover:text-blue-800 transition-colors"
+                  aria-label="授業一覧に戻る"
+                >
+                  ←
+                </button>
+                <h1 className="text-2xl font-bold text-gray-800 truncate">{selectedLecture.name}</h1>
+              </div>
+
+              {/* 授業情報セクション */}
+              <div className="bg-white p-6 rounded-xl shadow-md mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">{selectedLecture.name}</h2>
+                <p className="text-gray-700 text-lg mb-1">{selectedLecture.professor}</p>
+                <p className="text-gray-600 text-md mb-3">{selectedLecture.time}</p>
+                <div className="flex items-center mb-4">
+                  <span className="text-yellow-500 text-3xl mr-2">★</span>
+                  <span className="text-gray-800 font-bold text-2xl">{selectedLecture.averageRating.toFixed(1)}</span>
+                </div>
+                <p className="text-blue-600 font-medium text-sm">
+                  「テストが簡単」について同じ意見が {getSimilarOpinionsCount(selectedLecture.reviews, ['テスト簡単'])}件あります
+                </p>
+              </div>
+
+              {/* レビューセクション */}
+              <div className="bg-white p-6 rounded-xl shadow-md flex-grow overflow-y-auto mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">レビュー ({selectedLecture.reviews.length}件)</h3>
+
+                {/* レビュー件数スライダー */}
+                <div className="mb-6">
+                  <label htmlFor="review-count-slider" className="block text-gray-700 text-sm font-medium mb-2">
+                    表示レビュー数: {displayReviewCount}件
+                  </label>
+                  <input
+                    type="range"
+                    id="review-count-slider"
+                    min="1"
+                    max={selectedLecture.reviews.length}
+                    value={displayReviewCount}
+                    onChange={(e) => setDisplayReviewCount(parseInt(e.target.value))}
+                    className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer range-lg accent-blue-500"
+                    aria-valuemin="1"
+                    aria-valuemax={selectedLecture.reviews.length}
+                    aria-valuenow={displayReviewCount}
+                    aria-label="表示するレビュー数を調整"
+                  />
+                </div>
+
+                {/* レビューリスト */}
+                {selectedLecture.reviews.slice(0, displayReviewCount).map(review => (
+                  <div key={review.id} className="border-b border-gray-200 pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-gray-800 font-medium">{review.studentInfo.grade} {review.studentInfo.major}</p>
+                      {/* 感情度表示 */}
+                      <div className={`px-2 py-1 rounded-full text-xs font-semibold ${getSentimentColor(review.sentiment)}`}>
+                        感情度: {review.sentiment}%
+                      </div>
+                    </div>
+                    <p className="text-gray-700 text-sm leading-relaxed">{review.text}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* 履修に追加ボタン */}
+              <div className="p-4 bg-white rounded-xl shadow-sm mt-auto">
+                <button
+                  onClick={handleAddToSchedule}
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors shadow-lg"
+                  aria-label="この授業を履修に追加"
+                >
+                  履修に追加
+                </button>
+              </div>
+            </div>
+          );
+        };
+
+        // スケジュール画面コンポーネント
+        const SchedulePage = () => {
+          const { setCurrentPage, schedule, mockLectures } = useAppContext();
+
+          // 曜日と時限の定義
+          const days = ['月', '火', '水', '木', '金'];
+          const periods = ['1限', '2限', '3限', '4限', '5限'];
+
+          // スケジュールグリッドを初期化（nullで埋める）
+          const scheduleGrid = Array(periods.length).fill(null).map(() => Array(days.length).fill(null));
+
+          // スケジュールに登録された授業をグリッドに配置
+          schedule.forEach(item => {
+            const lecture = mockLectures.find(lec => lec.id === item.lectureId);
+            if (lecture) {
+              const [dayStr, periodStr] = lecture.time.split(' ');
+              const dayIndex = days.indexOf(dayStr.replace('曜', ''));
+              const periodIndex = periods.indexOf(periodStr);
+
+              if (dayIndex !== -1 && periodIndex !== -1) {
+                // 同じ時間帯に複数の授業があるかチェック
+                const existingLecturesInSlot = scheduleGrid[periodIndex][dayIndex] || [];
+                scheduleGrid[periodIndex][dayIndex] = [...existingLecturesInSlot, lecture];
+              }
+            }
+          });
+
+          return (
+            <div className="flex flex-col h-full bg-gray-50 p-4">
+              {/* ヘッダー */}
+              <div className="flex items-center p-4 bg-white rounded-xl shadow-sm mb-6">
+                <button
+                  onClick={() => setCurrentPage('lectureDetail')}
+                  className="mr-4 text-blue-600 font-bold text-xl hover:text-blue-800 transition-colors"
+                  aria-label="授業詳細に戻る"
+                >
+                  ←
+                </button>
+                <h1 className="text-2xl font-bold text-gray-800">スケジュール</h1>
+              </div>
+
+              {/* スケジュールグリッド */}
+              <div className="bg-white rounded-xl shadow-md p-4 overflow-x-auto flex-grow">
+                <table className="w-full table-fixed border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="w-16 p-2 text-sm font-semibold text-gray-600 border-b border-gray-200"></th>
+                      {days.map(day => (
+                        <th key={day} className="w-1/5 p-2 text-sm font-semibold text-gray-600 border-b border-gray-200">{day}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {periods.map((period, pIdx) => (
+                      <tr key={period}>
+                        <td className="p-2 text-center text-sm font-semibold text-gray-600 border-r border-b border-gray-200">{period}</td>
+                        {days.map((day, dIdx) => {
+                          const lecturesInSlot = scheduleGrid[pIdx][dIdx];
+                          const isConflict = lecturesInSlot && lecturesInSlot.length > 1;
+
+                          return (
+                            <td
+                              key={`${day}-${period}`}
+                              className={`p-2 border-b border-gray-200 ${lecturesInSlot ? (isConflict ? 'bg-red-100' : 'bg-blue-100') : 'bg-gray-50'} text-xs relative`}
+                            >
+                              {lecturesInSlot && lecturesInSlot.map((lecture, idx) => (
+                                <div
+                                  key={lecture.id + idx} // 同じスロットに複数ある場合のためにidxもキーに含める
+                                  className={`rounded-md p-1 mb-1 last:mb-0 ${isConflict ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'} text-center font-medium`}
+                                >
+                                  {lecture.name}
+                                  <p className="text-xxs">{lecture.professor}</p>
+                                  {isConflict && idx === 0 && <span className="absolute top-0 right-0 text-white text-xs font-bold bg-red-700 px-1 rounded-bl-md">重複!</span>}
+                                </div>
+                              ))}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        };
+
+        // 設定画面コンポーネント
+        const SettingsPage = () => {
+          const { setCurrentPage } = useAppContext();
+          return (
+            <div className="flex flex-col h-full bg-gray-50 p-4">
+              {/* ヘッダー */}
+              <div className="flex items-center p-4 bg-white rounded-xl shadow-sm mb-6">
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className="mr-4 text-blue-600 font-bold text-xl hover:text-blue-800 transition-colors"
+                  aria-label="ホームに戻る"
+                >
+                  ←
+                </button>
+                <h1 className="text-2xl font-bold text-gray-800">設定</h1>
+              </div>
+              {/* 設定項目 */}
+              <div className="bg-white p-6 rounded-xl shadow-md">
+                <p className="text-gray-700 mb-4">アプリの設定を調整できます。</p>
+                <ul className="space-y-4">
+                  <li>
+                    <label className="flex items-center justify-between text-gray-800">
+                      <span>通知を有効にする</span>
+                      <input type="checkbox" className="form-checkbox h-5 w-5 text-blue-600 rounded" defaultChecked />
+                    </label>
+                  </li>
+                  <li>
+                    <label className="flex items-center justify-between text-gray-800">
+                      <span>デフォルトレビュー表示数</span>
+                      <input type="range" min="1" max="15" defaultValue="5" className="w-1/2 h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                    </label>
+                  </li>
+                  <li>
+                    <button className="w-full text-left py-2 text-blue-600 hover:text-blue-800 transition-colors">
+                      プライバシーポリシー
+                    </button>
+                  </li>
+                  <li>
+                    <button className="w-full text-left py-2 text-red-600 hover:text-red-800 transition-colors">
+                      ログアウト
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          );
+        };
+
+        // ナビゲーションバーコンポーネント
+        const NavigationBar = () => {
+          const { currentPage, setCurrentPage } = useAppContext();
+          return (
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex justify-around py-3 px-4 rounded-t-xl z-10">
+              <button
+                onClick={() => setCurrentPage('home')}
+                className={`flex flex-col items-center text-sm font-medium ${currentPage === 'home' ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600 transition-colors`}
+                aria-label="ホーム"
+              >
+                <span className="text-xl">🏠</span>
+                ホーム
+              </button>
+              <button
+                onClick={() => setCurrentPage('schedule')}
+                className={`flex flex-col items-center text-sm font-medium ${currentPage === 'schedule' ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600 transition-colors`}
+                aria-label="スケジュール"
+              >
+                <span className="text-xl">🗓️</span>
+                スケジュール
+              </button>
+              <button
+                onClick={() => setCurrentPage('settings')}
+                className={`flex flex-col items-center text-sm font-medium ${currentPage === 'settings' ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600 transition-colors`}
+                aria-label="設定"
+              >
+                <span className="text-xl">⚙️</span>
+                設定
+              </button>
+            </div>
+          );
+        };
+
+        // メインアプリケーションコンポーネント
+        function App() {
+          const { currentPage } = useAppContext(); // コンテキストから現在のページを取得
+
+          return (
+            // アプリケーション全体のコンテナ
+            <div className="min-h-screen bg-gray-100 font-sans antialiased text-gray-900 flex flex-col">
+              {/* グローバルスタイルとTailwind CSSのCDN読み込み */}
+              <style>
+                {`
+                  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                  body {
+                    font-family: 'Inter', sans-serif;
+                  }
+                  .text-xxs {
+                    font-size: 0.65rem; /* 非常に小さいフォントサイズ */
+                  }
+                  /* カスタムレンジ入力のスライダーサムのスタイル */
+                  input[type="range"]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    background: #2563eb; /* blue-600 */
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                  }
+                  input[type="range"]::-moz-range-thumb {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    background: #2563eb; /* blue-600 */
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                  }
+                `}
+              </style>
+              {/* Tailwind CSS CDNはheadタグに移動済み */}
+
+              {/* メインコンテンツエリア：ナビゲーションバーと重ならないように下部にパディングを追加 */}
+              <div className="flex-grow pb-20">
+                {(() => {
+                  // currentPageの値に基づいて表示するコンポーネントを切り替える
+                  switch (currentPage) {
+                    case 'home':
+                      return <HomePage />;
+                    case 'lectureList':
+                      return <LectureListPage />;
+                    case 'lectureDetail':
+                      return <LectureDetailPage />;
+                    case 'schedule':
+                      return <SchedulePage />;
+                    case 'settings':
+                      return <SettingsPage />;
+                    default:
+                      return <HomePage />; // デフォルトはホーム画面
+                  }
+                })()}
+              </div>
+              {/* ナビゲーションバー */}
+              <NavigationBar />
+              {/* アプリケーションメッセージ表示 */}
+              <MessageDisplay />
+            </div>
+          );
+        }
+
+        // AppコンポーネントをAppProviderでラップしてエクスポート
+        // これにより、Appコンポーネントとその子孫コンポーネントがコンテキストにアクセスできるようになる
+        function WrappedApp() {
+          return (
+            <AppProvider>
+              <App />
+            </AppProvider>
+          );
+        }
+
+        // ReactアプリをDOMにレンダリング
+        ReactDOM.createRoot(document.getElementById('root')).render(<WrappedApp />);
+    </script>
+</body>
+</html>
